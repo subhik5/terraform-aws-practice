@@ -46,17 +46,25 @@ egress {
 }
 
 #ec2 instance using all resources
+
 resource "aws_instance" "my_instance" {
+    for_each = tomap({
+        ec2-1-automate = "t2.micro"
+        ec2_2-automate = "t2.medium"
+    })
+
+    depends_on = [ aws_security_group.my_security_group, aws_key_pair.my_key ]
     key_name = aws_key_pair.my_key.key_name  #interpolation
     security_groups = [aws_security_group.my_security_group.name]
-    instance_type = "t2.micro"
-    ami = "ami-0ec10929233384c7f"   #ubuntu
+    instance_type = each.value              #var.ec2_instance_type
+    ami = var.ec2_ami_id  #ubuntu
+    user_data = file("install_nginx.sh")
 
     root_block_device {
-        volume_size = 15
+        volume_size = var.env == "prod" ? 20 : var.ec2_default_root_storage_size #volume_size = var.ec2_root_storage_size
         volume_type = "gp3"
     }
     tags = {
-    Name = "ec2-automate"
+      Name = each.key                 #Name = "ec2-automate"
     }
 }
